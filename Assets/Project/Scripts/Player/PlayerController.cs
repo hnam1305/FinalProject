@@ -10,9 +10,9 @@ public class PlayerController : MonoBehaviour
 
     [Header("Mouse Look Settings")]
     public float mouseSensitivity = 2f;
-    public Transform playerCamera; // Sẽ kéo thả Camera vào đây
+    public Transform playerCamera;
 
-    private float cameraPitch = 0f; // Trục ngước lên/cúi xuống của Camera
+    private float cameraPitch = 0f;
     private Rigidbody rb;
     private Animator animator;
 
@@ -26,29 +26,33 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         animator = GetComponentInChildren<Animator>();
 
-        // Khóa con trỏ chuột vào giữa màn hình và ẩn nó đi
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
 
     void Update()
     {
-        // 1. NHÌN BẰNG CHUỘT (MOUSE LOOK)
+        if (ItemPickup.isComputerOpen)
+        {
+            moveX = 0f;
+            moveZ = 0f;
+            jumpRequested = false;
+            if (animator != null) animator.SetFloat("Speed", 0f);
+            return;
+        }
+
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-        // Xoay cơ thể nhân vật sang trái/phải
         transform.Rotate(Vector3.up * mouseX);
 
-        // Gật gù Camera lên/xuống
         if (playerCamera != null)
         {
             cameraPitch -= mouseY;
-            cameraPitch = Mathf.Clamp(cameraPitch, -85f, 85f); // Khóa góc, không cho gập cổ ra sau
+            cameraPitch = Mathf.Clamp(cameraPitch, -85f, 85f);
             playerCamera.localEulerAngles = new Vector3(cameraPitch, 0f, 0f);
         }
 
-        // 2. NHẬN LỆNH DI CHUYỂN
         moveX = Input.GetAxis("Horizontal");
         moveZ = Input.GetAxis("Vertical");
         isSprinting = Input.GetKey(KeyCode.LeftShift);
@@ -58,7 +62,6 @@ public class PlayerController : MonoBehaviour
             jumpRequested = true;
         }
 
-        // Cập nhật Animation
         if (animator != null)
         {
             float currentSpeed = new Vector2(moveX, moveZ).magnitude;
@@ -68,17 +71,20 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
-        // 3. DI CHUYỂN VẬT LÝ
+        if (ItemPickup.isComputerOpen)
+        {
+            rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
+            return;
+        }
+
         float currentSpeed = isSprinting ? sprintSpeed : moveSpeed;
 
-        // Di chuyển tương đối theo hướng nhìn của cơ thể
         Vector3 moveDirection = (transform.forward * moveZ + transform.right * moveX).normalized;
         Vector3 moveVelocity = moveDirection * currentSpeed;
 
-        moveVelocity.y = rb.linearVelocity.y; // Giữ nguyên trọng lực rơi
+        moveVelocity.y = rb.linearVelocity.y;
         rb.linearVelocity = moveVelocity;
 
-        // Nhảy
         if (jumpRequested)
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);

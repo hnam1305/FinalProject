@@ -9,33 +9,34 @@ public class ItemPickup : MonoBehaviour
 
     private Interactable currentItem;
 
+    public static bool isComputerOpen = false;
+
     void Update()
     {
-        // 1. KHI TAY ĐANG TRỐNG (Không cầm gì)
+        if (playerCamera == null) return;
+
+        if (isComputerOpen) return;
+
         if (currentItem == null)
         {
-            // Bấm E hoặc Click Chuột Trái (0) đều thực hiện lệnh Tương Tác
             if (Input.GetKeyDown(KeyCode.E) || Input.GetMouseButtonDown(0))
             {
                 TryPickUp();
             }
         }
-        // 2. KHI ĐANG CẦM THÙNG HÀNG TRÊN TAY
         else
         {
-            // Bấm E để vứt thùng hàng xuống đất
-            if (Input.GetKeyDown(KeyCode.E))
+           
+            if (Input.GetKeyDown(KeyCode.E)) // setting keycap to throw box 
             {
                 DropItem();
             }
-            // Click Chuột Trái để đặt sản phẩm lên kệ
+            // place item on shelf
             else if (Input.GetMouseButtonDown(0))
             {
                 TryPlaceItemOnShelf();
             }
-            // =====================================
-            // MỚI: Click Chuột Phải để rút đồ từ kệ về thùng
-            // =====================================
+            // pick up item from shelf
             else if (Input.GetMouseButtonDown(1))
             {
                 TryTakeItemFromShelf();
@@ -45,7 +46,7 @@ public class ItemPickup : MonoBehaviour
 
     private void TryPlaceItemOnShelf()
     {
-        // Cancel if the held item has no products or is empty
+        if (playerCamera == null) return;
         if (currentItem.productPrefab == null || currentItem.productCount <= 0) return;
 
         Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
@@ -63,48 +64,42 @@ public class ItemPickup : MonoBehaviour
                     GameObject newProduct = Instantiate(currentItem.productPrefab);
                     targetShelf.AddItemToShelf(newProduct, holdPosition, currentItem.itemData);
 
-                    Debug.Log("Đã xếp lên kệ! Trong thùng còn: " + currentItem.productCount);
+                    Debug.Log("Current count: " + currentItem.productCount);
                 }
             }
         }
     }
 
-    // =====================================
-    // HÀM MỚI: XỬ LÝ LẤY ĐỒ TỪ KỆ VỀ THÙNG
-    // =====================================
     private void TryTakeItemFromShelf()
     {
+        if (playerCamera == null) return;
+
         Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
         if (Physics.Raycast(ray, out RaycastHit hit, pickupRange, interactableLayer))
         {
             Shelf targetShelf = hit.collider.GetComponent<Shelf>();
             if (targetShelf != null)
             {
-                // Kiểm tra xem thùng có còn chỗ chứa không (Dựa vào số lượng tối đa của visualItems)
                 if (currentItem.productCount < currentItem.visualItems.Length)
                 {
-                    // Lấy item 3D từ trên kệ xuống
                     GameObject retrievedItem = targetShelf.RemoveItemFromShelf();
 
                     if (retrievedItem != null)
                     {
-                        // Phá hủy object 3D vừa lấy xuống vì nó đã chui tọt vào thùng
                         Destroy(retrievedItem);
-
-                        // Tăng số lượng hàng trong thùng lên và cập nhật hình ảnh
                         currentItem.productCount++;
                         currentItem.UpdateVisuals();
 
-                        Debug.Log("Đã rút về thùng! Số lượng hiện tại: " + currentItem.productCount);
+                        Debug.Log("Current count " + currentItem.productCount);
                     }
                     else
                     {
-                        Debug.Log("Kệ đang trống, không có gì để lấy!");
+                        Debug.Log("Shelf is empty, nothing to retrieve!");
                     }
                 }
                 else
                 {
-                    Debug.Log("Thùng đã đầy, không thể chứa thêm!");
+                    Debug.Log("Shelf is full, cannot retrieve more items!");
                 }
             }
         }
@@ -112,15 +107,24 @@ public class ItemPickup : MonoBehaviour
 
     private void TryPickUp()
     {
+        if (playerCamera == null) return;
+
         Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
         RaycastHit hit;
 
         if (Physics.Raycast(ray, out hit, pickupRange, interactableLayer))
         {
-            ComputerInteract computer = hit.collider.GetComponent<ComputerInteract>();
+            ComputerZoom computer = hit.collider.GetComponent<ComputerZoom>();
             if (computer != null)
             {
-                computer.OpenComputer();
+                computer.ToggleComputer();
+                return;
+            }
+
+            ComputerInteract computerInteract = hit.collider.GetComponent<ComputerInteract>();
+            if (computerInteract != null)
+            {
+                computerInteract.OpenComputer();
                 return;
             }
 

@@ -7,6 +7,18 @@ public class ProductCardUI : MonoBehaviour
     [Header("Data References")]
     public ItemData itemData;
 
+    // ==========================================
+    // DỮ LIỆU DÀNH CHO BỘ LỌC (ShopFilterManager)
+    // ==========================================
+    [Header("Filter Settings")]
+    [Tooltip("Gõ danh mục của sản phẩm này để thanh Dropdown Category lọc (VD: Food, Furniture)")]
+    public string category = "Food";
+
+    // Tự động lấy Tên và Trạng thái từ ItemData gốc, không cần nhập lại!
+    public string productName => itemData != null ? itemData.itemName : "";
+    public string displayType => itemData != null ? itemData.displayType : "";
+    // ==========================================
+
     [Header("UI - Left Section (Info)")]
     public TextMeshProUGUI productNameText;
     public TextMeshProUGUI brandText;

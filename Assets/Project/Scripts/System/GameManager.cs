@@ -95,8 +95,7 @@ public class GameManager : MonoBehaviour
         {
             float elapsedSeconds = Time.time - dayStartTime;
 
-            // Dùng trực tiếp số giây thực tế nhân với hệ số tốc độ (ví dụ 1 giây thực tế = 10 phút trong game)
-            // Cách này giúp thời gian nhích lên từng phút rất rõ ràng ngay trước mắt bạn
+            
             float totalMinutes = 480f + (elapsedSeconds * 10f);
 
             int currentTotalMins = Mathf.FloorToInt(totalMinutes) % 1440;

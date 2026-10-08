@@ -5,13 +5,13 @@ public class AutoDoor : MonoBehaviour
 {
     [Header("Door Settings")]
     public Transform doorModel;
-    [Tooltip("Góc muốn mở TƯƠNG ĐỐI so với lúc đóng (VD: nhập Y = 90 hoặc -90)")]
+    [Tooltip("Góc muốn mở TƯƠNG ĐỐI so với lúc đóng ")]
     public Vector3 openRotationOffset = new Vector3(0, 90, 0);
     [Tooltip("Thời gian mở cửa (giây)")]
     public float openDuration = 0.5f;
 
     private Vector3 closedRotation;
-    private Vector3 actualOpenRotation; // Góc mở thực tế sau khi tính toán
+    private Vector3 actualOpenRotation; 
     private bool isOpen = false;
     private Coroutine animationCoroutine;
 
@@ -19,9 +19,7 @@ public class AutoDoor : MonoBehaviour
     {
         if (doorModel != null)
         {
-            // Ghi nhớ góc đóng
             closedRotation = doorModel.localEulerAngles;
-            // Tự động tính toán góc mở chuẩn xác dù cái nhà có bị xoay đi hướng nào
             actualOpenRotation = closedRotation + openRotationOffset;
         }
     }
@@ -54,7 +52,6 @@ public class AutoDoor : MonoBehaviour
 
         while (elapsed < openDuration)
         {
-            // Dùng Slerp thay vì Lerp để cửa xoay tròn trịa và tự nhiên hơn ở các góc cong
             doorModel.localRotation = Quaternion.Slerp(startRot, endRot, elapsed / openDuration);
             elapsed += Time.deltaTime;
             yield return null;

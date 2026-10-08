@@ -3,110 +3,101 @@ using UnityEngine.AI;
 using System.Collections;
 using System.Collections.Generic;
 
+public enum NPCState
+{
+    Wandering,
+    PickingUpItem,
+    GoingToCheckout,
+    Leaving
+}
+
 [RequireComponent(typeof(NavMeshAgent))]
 public class NPCSmartWander : MonoBehaviour
 {
     public float walkSpeed = 1.5f;
-    public float stopRadius = 0.5f;
-    public float stuckTimeout = 2f;
     public List<PointOfInterest> availablePOIs = new List<PointOfInterest>();
 
+    public Transform checkoutCounter;
+    public Transform exitDoor;
+
     private NavMeshAgent agent;
-    private Animator animator;
-    private bool isBusy = false;
-    private PointOfInterest currentPOI;
-    private float stuckTimer = 0f;
+    private NPCState currentState = NPCState.Wandering;
+    private int itemsCollected = 0;
+    public int maxItemsToBuy = 1;
 
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
-        animator = GetComponentInChildren<Animator>();
-
         agent.speed = walkSpeed;
-        agent.stoppingDistance = stopRadius;
-
-        if (availablePOIs.Count == 0)
-        {
-            availablePOIs = new List<PointOfInterest>(FindObjectsByType<PointOfInterest>(FindObjectsSortMode.None));
-        }
-
-        MoveToNextPOI();
+        FindNextItem();
     }
 
     void Update()
     {
-        if (isBusy || currentPOI == null) return;
-
-        if (!agent.pathPending)
+        switch (currentState)
         {
-            if (agent.remainingDistance <= agent.stoppingDistance)
-            {
-                if (!agent.hasPath || agent.velocity.sqrMagnitude == 0f)
+            case NPCState.Wandering:
+                if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
                 {
-                    StartCoroutine(PerformActionAtPOI());
+                    StartCoroutine(HandlePickup());
                 }
-            }
-            else if (agent.hasPath)
-            {
-                if (agent.velocity.sqrMagnitude < 0.1f)
-                {
-                    stuckTimer += Time.deltaTime;
-                    if (stuckTimer >= stuckTimeout)
-                    {
-                        stuckTimer = 0f;
-                        MoveToNextPOI();
-                    }
-                }
-                else
-                {
-                    stuckTimer = 0f;
-                }
-            }
-        }
+                break;
 
-        if (animator != null)
-        {
-            animator.SetFloat("Speed", agent.velocity.magnitude);
+            case NPCState.PickingUpItem:
+                break;
+
+            case NPCState.GoingToCheckout:
+                if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
+                {
+                    StartCoroutine(HandleCheckout());
+                }
+                break;
+
+            case NPCState.Leaving:
+                if (!agent.pathPending && agent.remainingDistance <= 1.0f)
+                {
+                    Destroy(gameObject);
+                }
+                break;
         }
     }
 
-    private void MoveToNextPOI()
+    private void FindNextItem() // ngẫu nhiên tìm vật phẩm để đi thanh toán
     {
         if (availablePOIs.Count == 0) return;
 
-        PointOfInterest nextPOI = currentPOI;
-        int attempts = 0;
-
-        while (nextPOI == currentPOI && attempts < 10)
-        {
-            nextPOI = availablePOIs[Random.Range(0, availablePOIs.Count)];
-            attempts++;
-        }
-
-        currentPOI = nextPOI;
-
-        agent.isStopped = false;
-        agent.SetDestination(currentPOI.transform.position);
-        isBusy = false;
-        stuckTimer = 0f;
+        currentState = NPCState.Wandering;
+        Transform target = availablePOIs[Random.Range(0, availablePOIs.Count)].transform;
+        agent.SetDestination(target.position);
     }
 
-    private IEnumerator PerformActionAtPOI()
+    private IEnumerator HandlePickup()// quét vật phẩm và nhặt
     {
-        isBusy = true;
-        agent.isStopped = true;
-        stuckTimer = 0f;
+        currentState = NPCState.PickingUpItem;
+        yield return new WaitForSeconds(2f);
 
-        transform.rotation = currentPOI.transform.rotation;
+        itemsCollected++;
 
-        if (animator != null && !string.IsNullOrEmpty(currentPOI.animTriggerName))
+        if (itemsCollected >= maxItemsToBuy && checkoutCounter != null)
         {
-            animator.SetTrigger(currentPOI.animTriggerName);
+            currentState = NPCState.GoingToCheckout;
+            agent.SetDestination(checkoutCounter.position);
         }
+        else
+        {
+            FindNextItem();
+        }
+    }
 
-        float waitTime = Random.Range(currentPOI.minWaitTime, currentPOI.maxWaitTime);
-        yield return new WaitForSeconds(waitTime);
+    private IEnumerator HandleCheckout()// mang đồ dã được nhặt ra thanh toán
+    {
+        currentState = NPCState.PickingUpItem;
+        yield return new WaitForSeconds(3f);
 
-        MoveToNextPOI();
+        if (exitDoor != null)
+        {
+            currentState = NPCState.Leaving;
+            agent.SetDestination(exitDoor.position);
+        }
     }
 }
